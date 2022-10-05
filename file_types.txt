@@ -1,5 +1,6 @@
 Different Extensions Found: 3
 
-txt
-md
-py
+text/plain : 1
+text/x-python : 1
+Unknown Extensions:
+	/Users/zacadams/Development/python-file-organizer/README.md
