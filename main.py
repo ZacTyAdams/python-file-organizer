@@ -28,7 +28,8 @@ if __name__ == "__main__":
     list_of_extensions = gather_file_types(directory)
     # write list_of_extensions to a file
     with open('file_types.txt', 'w') as f:
+        f.write('Different Extensions Found: %d\n\n' % len(list_of_extensions))
         for item in list_of_extensions:
             f.write("%s\n" % item)
-            
+
     print(list_of_extensions)
