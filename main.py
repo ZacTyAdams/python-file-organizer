@@ -4,6 +4,7 @@ import os
 import json
 import hashlib
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class File:
     def __init__(self, path, hash, type):
@@ -19,38 +20,42 @@ def compute_file_hash(file_path):
             hash_sha256.update(chunk)
     return hash_sha256.hexdigest()
 
+def process_file(file_path):
+    filetype = mimetypes.guess_type(file_path)
+    file_hash = compute_file_hash(file_path)
+    file_object = File(file_path, file_hash, filetype[0])
+    return file_path, file_hash, filetype[0], file_object
+
 def scan_directory(directory):
-    global extensions
     list_of_extensions = {}
     unknown_extensions = []
     file_hashes = {}
     file_objects = {}
 
-    for root, dirs, files in os.walk(directory):
-        files = [f for f in files if not f[0] == '.']
-        dirs[:] = [d for d in dirs if not d[0] == '.']
+    with ThreadPoolExecutor() as executor:
+        futures = []
+        for root, dirs, files in os.walk(directory):
+            files = [f for f in files if not f[0] == '.']
+            dirs[:] = [d for d in dirs if not d[0] == '.']
+            for file in files:
+                file_path = os.path.join(root, file)
+                futures.append(executor.submit(process_file, file_path))
 
-        for file in files:
-            file_path = os.path.join(root, file)
+        for future in as_completed(futures):
+            file_path, file_hash, filetype, file_object = future.result()
             print(file_path)
 
-
-            filetype = mimetypes.guess_type(file_path)
-            file_hash = compute_file_hash(file_path)
-            file_object = File(file_path, file_hash, filetype[0])
-            
             if file_hash in file_hashes:
                 print(f"Duplicate found: {file_path} is a duplicate of {file_hashes[file_hash]}")
                 continue
             else:
                 file_hashes[file_hash] = file_path
-                # file_objects.append(file_object)
 
-            if filetype[0] is not None:
-                if filetype[0] not in file_objects:
-                    file_objects[filetype[0]] = []
-                list_of_extensions[filetype[0]] = list_of_extensions.get(filetype[0], 0) + 1
-                file_objects[filetype[0]].append(file_object)
+            if filetype is not None:
+                if filetype not in file_objects:
+                    file_objects[filetype] = []
+                list_of_extensions[filetype] = list_of_extensions.get(filetype, 0) + 1
+                file_objects[filetype].append(file_object)
             else:
                 if 'unknown' not in file_objects:
                     file_objects['unknown'] = []
@@ -93,8 +98,6 @@ if __name__ == "__main__":
     if os.path.isfile('file_objects.json'):
         os.remove('file_objects.json')
     json.dump(files, open('file_objects.json', 'w'), default=lambda x: x.__dict__)
-
-
 
     print(list_of_extensions)
     time_end = time.time()
