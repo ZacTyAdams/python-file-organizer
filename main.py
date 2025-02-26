@@ -39,6 +39,7 @@ def scan_directory(directory):
             dirs[:] = [d for d in dirs if not d[0] == '.']
             for file in files:
                 file_path = os.path.join(root, file)
+                print(f"Processing {file_path}")
                 futures.append(executor.submit(process_file, file_path))
 
         for future in as_completed(futures):
